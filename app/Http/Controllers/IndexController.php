@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class IndexController extends Controller
 {
@@ -19,7 +20,7 @@ class IndexController extends Controller
         $url = $request->input('url');
 
         if (!$url || !str_contains($url, 'youtube.com')) {
-            return response()->json(['error' => 'Invalid YouTube URL'], 400);
+            throw ValidationException::withMessages(['url' => 'Invalid YouTube URL']);
         }
 
         $tempDir = storage_path('app/tmp');
@@ -34,20 +35,13 @@ class IndexController extends Controller
         exec($command, $output, $status);
 
         if ($status !== 0) {
-            return response()->json([
-                'error' => 'Download failed',
-                'debug' => $output,
-            ], 500);
+            throw ValidationException::withMessages(['url' => 'Download failed']);
         }
 
         $files = glob($tempDir . DIRECTORY_SEPARATOR . $baseFilename . '.*');
 
         if (empty($files)) {
-            return response()->json([
-                'error' => 'Download completed but file not found',
-                'expected_pattern' => $baseFilename . '.*',
-                'debug' => $output,
-            ], 500);
+            throw ValidationException::withMessages(['url' => 'Download failed']);
         }
 
         $finalPath = $files[0];
